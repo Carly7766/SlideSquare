@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections;
 
 public class GameManager : MonoBehaviour
 {
@@ -30,6 +31,17 @@ public class GameManager : MonoBehaviour
     {
         if (squarePrefab != null)
             InitBoard();
+
+        StartCoroutine(ApplyJapaneseFont());
+    }
+
+    private IEnumerator ApplyJapaneseFont()
+    {
+        yield return null; // wait one frame so GoalMark Text objects are created
+        var font = Resources.Load<Font>("Fonts/NotoSansJP-Regular");
+        if (font == null) yield break;
+        foreach (var t in FindObjectsByType<Text>(FindObjectsInactive.Include))
+            t.font = font;
     }
 
     // ── Board construction ──────────────────────────────────────────────

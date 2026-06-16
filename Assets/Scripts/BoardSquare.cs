@@ -57,8 +57,6 @@ public class BoardSquare : MonoBehaviour, IPointerClickHandler
         txt.color     = _isGoalA ? new Color(0.2f, 0.5f, 1.0f) : new Color(1.0f, 0.2f, 0.2f);
         txt.alignment = TextAnchor.UpperRight;
         txt.raycastTarget = false;
-        txt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        if (txt.font == null) txt.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
     }
 
     public void SetHighlight(HighlightType type)
