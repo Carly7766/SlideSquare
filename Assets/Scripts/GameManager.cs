@@ -25,6 +25,12 @@ public class GameManager : MonoBehaviour
     private PlayerSide _currentPlayer = PlayerSide.PlayerA;
     private GamePiece  _selected;
 
+    // 調整ルール用の状態
+    private int  _lastSlideRow = -1;  // 直前のスライドの列（-1 = なし）。巻き戻し禁止の判定に使う
+    private bool _lastSlideRight;     // 直前のスライドの方向
+    private bool _isFirstTurn = true; // 先手の第1ターンはスライドを行わない
+    private readonly Dictionary<string, int> _positionCounts = new Dictionary<string, int>(); // 千日手判定
+
     private void Awake() => Instance = this;
 
     private void Start()
@@ -48,8 +54,10 @@ public class GameManager : MonoBehaviour
 
     private void InitBoard()
     {
+        _currentPlayer = Random.value < 0.5f ? PlayerSide.PlayerA : PlayerSide.PlayerB;
         BuildSquares();
         PlaceInitialPieces();
+        RecordPosition();
         uiManager.UpdateStatus(_currentPlayer, _phase);
     }
 
@@ -237,17 +245,26 @@ public class GameManager : MonoBehaviour
         _selected = null;
         _validMoves.Clear();
 
-        // Win check
-        if (CheckWin(_currentPlayer))
+        // 移動直後の勝利判定: 移動による即時到達、または相手の全滅
+        if (HasPieceOnOwnGoal(_currentPlayer) || !HasAnyPiece(Opponent(_currentPlayer)))
         {
             _phase = GamePhase.GameOver;
             uiManager.ShowWin(_currentPlayer);
             return;
         }
 
+        // 先手の第1ターンはスライドを行わない
+        if (_isFirstTurn || !HasAnyLegalSlide())
+        {
+            _lastSlideRow = -1; // スライドしないため、相手に巻き戻し制限は付かない
+            EndTurn();
+            return;
+        }
+
         // Slide phase
         _phase = GamePhase.SelectSlide;
         uiManager.ShowSlidePanel(true);
+        UpdateSlideButtons();
         uiManager.UpdateStatus(_currentPlayer, _phase);
     }
 
@@ -256,6 +273,7 @@ public class GameManager : MonoBehaviour
     public void OnSlideClicked(int row, bool slideRight)
     {
         if (_phase != GamePhase.SelectSlide) return;
+        if (!IsSlideLegal(row, slideRight)) return;
 
         var rowData = new GamePiece[SIZE];
         for (int c = 0; c < SIZE; c++) rowData[c] = _pieces[row, c];
@@ -287,45 +305,103 @@ public class GameManager : MonoBehaviour
 
         uiManager.ShowSlidePanel(false);
 
-        // Win check after slide (before switching players)
-        if (CheckWin(_currentPlayer))
+        // スライド直後には勝利判定を行わない（ゴールに乗った駒は定着待ち）
+        _lastSlideRow   = row;
+        _lastSlideRight = slideRight;
+        EndTurn();
+    }
+
+    // 空の列はスライドできない。相手の直前のスライドの巻き戻し（同じ列を逆方向）もできない。
+    private bool IsSlideLegal(int row, bool slideRight)
+    {
+        bool hasPiece = false;
+        for (int c = 0; c < SIZE; c++)
+            if (_pieces[row, c] != null) { hasPiece = true; break; }
+        if (!hasPiece) return false;
+        if (row == _lastSlideRow && slideRight != _lastSlideRight) return false;
+        return true;
+    }
+
+    private bool HasAnyLegalSlide()
+    {
+        for (int r = 0; r < SIZE; r++)
+            if (IsSlideLegal(r, true) || IsSlideLegal(r, false)) return true;
+        return false;
+    }
+
+    private void UpdateSlideButtons()
+    {
+        foreach (var sb in FindObjectsByType<SlideButton>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            sb.SetInteractable(IsSlideLegal(sb.Row, sb.SlideRight));
+    }
+
+    // ── Turn end / win check ────────────────────────────────────────────
+
+    private void EndTurn()
+    {
+        _isFirstTurn   = false;
+        _currentPlayer = Opponent(_currentPlayer);
+
+        // ターン開始時判定1: 自分の駒が自分のゴールマスに残っていれば定着で勝利
+        if (HasPieceOnOwnGoal(_currentPlayer))
         {
             _phase = GamePhase.GameOver;
             uiManager.ShowWin(_currentPlayer);
             return;
         }
 
-        _currentPlayer = _currentPlayer == PlayerSide.PlayerA
-            ? PlayerSide.PlayerB : PlayerSide.PlayerA;
+        // ターン開始時判定2: 同一盤面（手番含む）が3回現れたら千日手で引き分け
+        if (RecordPosition() >= 3)
+        {
+            _phase = GamePhase.GameOver;
+            uiManager.ShowDraw();
+            return;
+        }
+
         _phase = GamePhase.SelectPiece;
         uiManager.UpdateStatus(_currentPlayer, _phase);
     }
 
-    // ── Win check ───────────────────────────────────────────────────────
+    private static PlayerSide Opponent(PlayerSide player) =>
+        player == PlayerSide.PlayerA ? PlayerSide.PlayerB : PlayerSide.PlayerA;
 
-    private bool CheckWin(PlayerSide player)
+    // Goal corners: Player A targets (SIZE-1, 0), Player B targets (0, SIZE-1)
+    private bool HasPieceOnOwnGoal(PlayerSide player)
     {
-        // Win condition 1: reach specific goal corner
-        //   Player A: (SIZE-1, 0) = bottom-left
-        //   Player B: (0, SIZE-1) = top-right
         int goalRow = player == PlayerSide.PlayerA ? SIZE - 1 : 0;
         int goalCol = player == PlayerSide.PlayerA ? 0 : SIZE - 1;
+        var p = _pieces[goalRow, goalCol];
+        return p != null && p.Owner == player;
+    }
 
-        var opponent = player == PlayerSide.PlayerA ? PlayerSide.PlayerB : PlayerSide.PlayerA;
-        bool opHasPieces = false;
+    private bool HasAnyPiece(PlayerSide player)
+    {
+        for (int r = 0; r < SIZE; r++)
+            for (int c = 0; c < SIZE; c++)
+                if (_pieces[r, c] != null && _pieces[r, c].Owner == player) return true;
+        return false;
+    }
 
+    // 現在の局面（手番含む）の出現回数を記録し、今回を含めた回数を返す
+    private int RecordPosition()
+    {
+        var sb = new System.Text.StringBuilder(SIZE * SIZE + 1);
+        sb.Append(_currentPlayer == PlayerSide.PlayerA ? 'A' : 'B');
         for (int r = 0; r < SIZE; r++)
         {
             for (int c = 0; c < SIZE; c++)
             {
                 var p = _pieces[r, c];
-                if (p == null) continue;
-                if (p.Owner == opponent) opHasPieces = true;
-                // Win condition 2: also win if all opponent pieces captured
-                if (p.Owner == player && r == goalRow && c == goalCol) return true;
+                sb.Append(p == null ? '.'
+                    : p.Owner == PlayerSide.PlayerA
+                        ? (p.PieceType == PieceType.Diagonal ? 'a' : 'o')
+                        : (p.PieceType == PieceType.Diagonal ? 'b' : 'p'));
             }
         }
-        return !opHasPieces;
+        string key = sb.ToString();
+        _positionCounts.TryGetValue(key, out int count);
+        _positionCounts[key] = ++count;
+        return count;
     }
 
     // ── Restart ─────────────────────────────────────────────────────────
@@ -346,13 +422,17 @@ public class GameManager : MonoBehaviour
         }
 
         _phase         = GamePhase.SelectPiece;
-        _currentPlayer = PlayerSide.PlayerA;
+        _currentPlayer = Random.value < 0.5f ? PlayerSide.PlayerA : PlayerSide.PlayerB;
         _selected      = null;
         _validMoves.Clear();
+        _lastSlideRow  = -1;
+        _isFirstTurn   = true;
+        _positionCounts.Clear();
 
         uiManager.ShowSlidePanel(false);
         uiManager.ShowWinOverlay(false);
         PlaceInitialPieces();
+        RecordPosition();
         uiManager.UpdateStatus(_currentPlayer, _phase);
     }
 }

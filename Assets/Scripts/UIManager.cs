@@ -51,4 +51,10 @@ public class UIManager : MonoBehaviour
         if (winText) winText.text = name + " の勝利！";
         ShowWinOverlay(true);
     }
+
+    public void ShowDraw()
+    {
+        if (winText) winText.text = "引き分け（千日手）";
+        ShowWinOverlay(true);
+    }
 }
