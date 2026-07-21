@@ -29,6 +29,8 @@ public class GameManager : MonoBehaviour
     private int  _lastSlideRow = -1;  // 直前のスライドの列（-1 = なし）。巻き戻し禁止の判定に使う
     private bool _lastSlideRight;     // 直前のスライドの方向
     private bool _isFirstTurn = true; // 先手の第1ターンはスライドを行わない
+    private int  _movedFromRow = -1;  // 今の手番で動かした駒の元の行。移動連動スライドの判定に使う
+    private int  _movedToRow   = -1;  // 今の手番で動かした駒の移動先の行
     private readonly Dictionary<string, int> _positionCounts = new Dictionary<string, int>(); // 千日手判定
 
     private void Awake() => Instance = this;
@@ -57,8 +59,7 @@ public class GameManager : MonoBehaviour
         _currentPlayer = Random.value < 0.5f ? PlayerSide.PlayerA : PlayerSide.PlayerB;
         BuildSquares();
         PlaceInitialPieces();
-        RecordPosition();
-        uiManager.UpdateStatus(_currentPlayer, _phase);
+        BeginTurn();
     }
 
     private void BuildSquares()
@@ -186,13 +187,14 @@ public class GameManager : MonoBehaviour
         uiManager.UpdateStatus(_currentPlayer, _phase);
     }
 
-    private void ComputeValidMoves(GamePiece piece)
-    {
-        (int dr, int dc)[] dirs = piece.PieceType == PieceType.Orthogonal
+    private static (int dr, int dc)[] GetDirections(PieceType type) =>
+        type == PieceType.Orthogonal
             ? new[] { (-1, 0), (1, 0), (0, -1), (0, 1) }
             : new[] { (-1, -1), (-1, 1), (1, -1), (1, 1) };
 
-        foreach (var (dr, dc) in dirs)
+    private void ComputeValidMoves(GamePiece piece)
+    {
+        foreach (var (dr, dc) in GetDirections(piece.PieceType))
         {
             int nr = piece.Row + dr, nc = piece.Col + dc;
             if (nr < 0 || nr >= SIZE || nc < 0 || nc >= SIZE) continue;
@@ -200,6 +202,30 @@ public class GameManager : MonoBehaviour
             if (target != null && target.Owner == piece.Owner) continue;
             _validMoves.Add((nr, nc));
         }
+    }
+
+    private bool HasLegalMove(GamePiece piece)
+    {
+        foreach (var (dr, dc) in GetDirections(piece.PieceType))
+        {
+            int nr = piece.Row + dr, nc = piece.Col + dc;
+            if (nr < 0 || nr >= SIZE || nc < 0 || nc >= SIZE) continue;
+            var target = _pieces[nr, nc];
+            if (target != null && target.Owner == piece.Owner) continue;
+            return true;
+        }
+        return false;
+    }
+
+    private bool HasAnyLegalMove(PlayerSide player)
+    {
+        for (int r = 0; r < SIZE; r++)
+            for (int c = 0; c < SIZE; c++)
+            {
+                var p = _pieces[r, c];
+                if (p != null && p.Owner == player && HasLegalMove(p)) return true;
+            }
+        return false;
     }
 
     private bool IsValidMove(int row, int col)
@@ -230,10 +256,15 @@ public class GameManager : MonoBehaviour
 
         // Move in data
         var piece = _selected;
+        int fromRow = piece.Row;
         _pieces[piece.Row, piece.Col] = null;
         _pieces[targetRow, targetCol] = piece;
         piece.Row = targetRow;
         piece.Col = targetCol;
+
+        // 移動連動スライド用: 今動かした駒の元の行・移動先の行を記録
+        _movedFromRow = fromRow;
+        _movedToRow   = targetRow;
 
         // Move visually
         piece.transform.SetParent(_squares[targetRow, targetCol].transform, false);
@@ -311,9 +342,12 @@ public class GameManager : MonoBehaviour
         EndTurn();
     }
 
+    // 移動連動: 今動かした駒の元の行/移動先の行以外は選べない。
     // 空の列はスライドできない。相手の直前のスライドの巻き戻し（同じ列を逆方向）もできない。
     private bool IsSlideLegal(int row, bool slideRight)
     {
+        if (row != _movedFromRow && row != _movedToRow) return false;
+
         bool hasPiece = false;
         for (int c = 0; c < SIZE; c++)
             if (_pieces[row, c] != null) { hasPiece = true; break; }
@@ -341,7 +375,13 @@ public class GameManager : MonoBehaviour
     {
         _isFirstTurn   = false;
         _currentPlayer = Opponent(_currentPlayer);
+        BeginTurn();
+    }
 
+    // ターン開始時の判定（定着・千日手）を行い、決着していなければ手番を開始する。
+    // 動かせる駒が1つもない場合は移動・スライドともパスして次の手番へ進む。
+    private void BeginTurn()
+    {
         // ターン開始時判定1: 自分の駒が自分のゴールマスに残っていれば定着で勝利
         if (HasPieceOnOwnGoal(_currentPlayer))
         {
@@ -355,6 +395,13 @@ public class GameManager : MonoBehaviour
         {
             _phase = GamePhase.GameOver;
             uiManager.ShowDraw();
+            return;
+        }
+
+        // 合法な移動を持つ駒が1つもなければ、移動・スライドともパスして相手のターンへ
+        if (!HasAnyLegalMove(_currentPlayer))
+        {
+            EndTurn();
             return;
         }
 
@@ -421,18 +468,18 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        _phase         = GamePhase.SelectPiece;
         _currentPlayer = Random.value < 0.5f ? PlayerSide.PlayerA : PlayerSide.PlayerB;
         _selected      = null;
         _validMoves.Clear();
         _lastSlideRow  = -1;
+        _movedFromRow  = -1;
+        _movedToRow    = -1;
         _isFirstTurn   = true;
         _positionCounts.Clear();
 
         uiManager.ShowSlidePanel(false);
         uiManager.ShowWinOverlay(false);
         PlaceInitialPieces();
-        RecordPosition();
-        uiManager.UpdateStatus(_currentPlayer, _phase);
+        BeginTurn();
     }
 }

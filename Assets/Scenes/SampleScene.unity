@@ -168,7 +168,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 126647561}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 54dbbe550a4fff8478bb9b576dfdd94d, type: 3}
+  m_Script: {fileID: 11500000, guid: 901981e541aca0a429afd00318b3ced4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SlideButton
   Row: 2
@@ -539,7 +539,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 457971830}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 54dbbe550a4fff8478bb9b576dfdd94d, type: 3}
+  m_Script: {fileID: 11500000, guid: 901981e541aca0a429afd00318b3ced4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SlideButton
   Row: 0
@@ -812,7 +812,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 526974573}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 54dbbe550a4fff8478bb9b576dfdd94d, type: 3}
+  m_Script: {fileID: 11500000, guid: 901981e541aca0a429afd00318b3ced4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SlideButton
   Row: 4
@@ -1377,7 +1377,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 852554660}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 54dbbe550a4fff8478bb9b576dfdd94d, type: 3}
+  m_Script: {fileID: 11500000, guid: 901981e541aca0a429afd00318b3ced4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SlideButton
   Row: 3
@@ -1592,7 +1592,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1031996343}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 54dbbe550a4fff8478bb9b576dfdd94d, type: 3}
+  m_Script: {fileID: 11500000, guid: 901981e541aca0a429afd00318b3ced4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SlideButton
   Row: 1
@@ -1921,7 +1921,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1170026331}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 54dbbe550a4fff8478bb9b576dfdd94d, type: 3}
+  m_Script: {fileID: 11500000, guid: 901981e541aca0a429afd00318b3ced4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SlideButton
   Row: 4
@@ -2057,7 +2057,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1191865687}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 54dbbe550a4fff8478bb9b576dfdd94d, type: 3}
+  m_Script: {fileID: 11500000, guid: 901981e541aca0a429afd00318b3ced4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SlideButton
   Row: 2
@@ -2238,7 +2238,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1288403175}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 54dbbe550a4fff8478bb9b576dfdd94d, type: 3}
+  m_Script: {fileID: 11500000, guid: 901981e541aca0a429afd00318b3ced4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SlideButton
   Row: 1
@@ -2884,7 +2884,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1837778600}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 54dbbe550a4fff8478bb9b576dfdd94d, type: 3}
+  m_Script: {fileID: 11500000, guid: 901981e541aca0a429afd00318b3ced4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SlideButton
   Row: 3
@@ -3175,12 +3175,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 2041587254}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: dc8e4f15dbc9a8b4e851541ebff1bf97, type: 3}
+  m_Script: {fileID: 11500000, guid: f99bb220a29751c42b903190298caece, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
-  squarePrefab: {fileID: 7967481691274174521, guid: 41b74a53e5557c64093ed488531f2706, type: 3}
-  pieceDiagonalPrefab: {fileID: 215240068047596433, guid: c8476c4f465d3cb43963fbe347b62e40, type: 3}
-  pieceOrthogonalPrefab: {fileID: 1358400061687804071, guid: cf734df715499f549b0ea1e2e9818a4c, type: 3}
+  squarePrefab: {fileID: 7967481691274174521, guid: 03b1ffda8121fe64f866373216532f9c, type: 3}
+  pieceDiagonalPrefab: {fileID: 215240068047596433, guid: d5e56a1b7e000c54b96e5b688d2958eb, type: 3}
+  pieceOrthogonalPrefab: {fileID: 1358400061687804071, guid: 19978760bd930354ab33d67584ed3173, type: 3}
   boardContainer: {fileID: 1141606037}
   uiManager: {fileID: 2041587257}
 --- !u!114 &2041587257
@@ -3192,7 +3192,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 2041587254}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c53025028a198514d9858782468d646c, type: 3}
+  m_Script: {fileID: 11500000, guid: cf57c25c55f2ea04ead57aae4ce54680, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIManager
   turnText: {fileID: 745126396}
@@ -3250,7 +3250,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 2106313492}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 54dbbe550a4fff8478bb9b576dfdd94d, type: 3}
+  m_Script: {fileID: 11500000, guid: 901981e541aca0a429afd00318b3ced4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SlideButton
   Row: 0
