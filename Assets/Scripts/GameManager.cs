@@ -33,6 +33,10 @@ public class GameManager : MonoBehaviour
     private int  _movedToRow   = -1;  // 今の手番で動かした駒の移動先の行
     private readonly Dictionary<string, int> _positionCounts = new Dictionary<string, int>(); // 千日手判定
 
+    // 一斉スライド用の状態（対局中プレイヤーごとに1回。仕様は Assets/Documents/AllInSlideSpec.md 参照）
+    private readonly bool[] _usedAllInSlide = new bool[2]; // 既に使用済みか（index = (int)PlayerSide）
+    private readonly bool[] _skipNextSlide  = new bool[2]; // 反動で次のスライドフェーズをスキップするか
+
     private void Awake() => Instance = this;
 
     private void Start()
@@ -97,16 +101,16 @@ public class GameManager : MonoBehaviour
     {
         // Player A (top)
         Spawn(PieceType.Diagonal,   PlayerSide.PlayerA, 0, 0);
+        Spawn(PieceType.Orthogonal, PlayerSide.PlayerA, 0, 1);
         Spawn(PieceType.Diagonal,   PlayerSide.PlayerA, 0, 2);
+        Spawn(PieceType.Orthogonal, PlayerSide.PlayerA, 0, 3);
         Spawn(PieceType.Diagonal,   PlayerSide.PlayerA, 0, 4);
-        Spawn(PieceType.Orthogonal, PlayerSide.PlayerA, 1, 1);
-        Spawn(PieceType.Orthogonal, PlayerSide.PlayerA, 1, 3);
 
         // Player B (bottom)
-        Spawn(PieceType.Orthogonal, PlayerSide.PlayerB, 3, 1);
-        Spawn(PieceType.Orthogonal, PlayerSide.PlayerB, 3, 3);
         Spawn(PieceType.Diagonal,   PlayerSide.PlayerB, 4, 0);
+        Spawn(PieceType.Orthogonal, PlayerSide.PlayerB, 4, 1);
         Spawn(PieceType.Diagonal,   PlayerSide.PlayerB, 4, 2);
+        Spawn(PieceType.Orthogonal, PlayerSide.PlayerB, 4, 3);
         Spawn(PieceType.Diagonal,   PlayerSide.PlayerB, 4, 4);
     }
 
@@ -284,9 +288,10 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        // 先手の第1ターンはスライドを行わない
-        if (_isFirstTurn || !HasAnyLegalSlide())
+        // 先手の第1ターンはスライドを行わない。一斉スライドの反動が残っている場合も同様にスキップする
+        if (_isFirstTurn || _skipNextSlide[(int)_currentPlayer] || !HasAnyLegalSlide())
         {
+            _skipNextSlide[(int)_currentPlayer] = false; // 反動は1回消費したら解除
             _lastSlideRow = -1; // スライドしないため、相手に巻き戻し制限は付かない
             EndTurn();
             return;
@@ -306,6 +311,41 @@ public class GameManager : MonoBehaviour
         if (_phase != GamePhase.SelectSlide) return;
         if (!IsSlideLegal(row, slideRight)) return;
 
+        SlideRow(row, slideRight);
+        uiManager.ShowSlidePanel(false);
+
+        // スライド直後には勝利判定を行わない（ゴールに乗った駒は定着待ち）
+        _lastSlideRow   = row;
+        _lastSlideRight = slideRight;
+        EndTurn();
+    }
+
+    // 一斉スライド: 対局中プレイヤー1人につき1回、5行すべてを同じ方向へ同時にスライドする特殊アクション。
+    // 移動連動・巻き戻し禁止・空列禁止のいずれの制限も受けない代わりに、使った次の自分の番はスライドを行えない
+    // （反動）。詳細仕様は Assets/Documents/AllInSlideSpec.md を参照。
+    public void OnAllInSlideClicked(bool slideRight)
+    {
+        if (_phase != GamePhase.SelectSlide) return;
+        if (_usedAllInSlide[(int)_currentPlayer]) return;
+
+        for (int row = 0; row < SIZE; row++)
+            SlideRow(row, slideRight);
+
+        uiManager.ShowSlidePanel(false);
+
+        _usedAllInSlide[(int)_currentPlayer] = true;
+        _skipNextSlide[(int)_currentPlayer]  = true;
+
+        // 全列を一括操作する特殊行動のため、通常の巻き戻し禁止の記録対象にはしない
+        _lastSlideRow = -1;
+
+        // スライド直後には勝利判定を行わない（ゴールに乗った駒は定着待ち。通常のスライドと同じ扱い）
+        EndTurn();
+    }
+
+    // 指定した行を1マス分スライドさせる（データ・見た目の更新のみ。合法性チェックや手番終了は呼び出し側の責務）
+    private void SlideRow(int row, bool slideRight)
+    {
         var rowData = new GamePiece[SIZE];
         for (int c = 0; c < SIZE; c++) rowData[c] = _pieces[row, c];
 
@@ -333,13 +373,6 @@ public class GameManager : MonoBehaviour
             rt.anchorMax       = new Vector2(0.5f, 0.5f);
             rt.anchoredPosition = Vector2.zero;
         }
-
-        uiManager.ShowSlidePanel(false);
-
-        // スライド直後には勝利判定を行わない（ゴールに乗った駒は定着待ち）
-        _lastSlideRow   = row;
-        _lastSlideRight = slideRight;
-        EndTurn();
     }
 
     // 移動連動: 今動かした駒の元の行/移動先の行以外は選べない。
@@ -367,6 +400,10 @@ public class GameManager : MonoBehaviour
     {
         foreach (var sb in FindObjectsByType<SlideButton>(FindObjectsInactive.Include, FindObjectsSortMode.None))
             sb.SetInteractable(IsSlideLegal(sb.Row, sb.SlideRight));
+
+        bool allInAvailable = !_usedAllInSlide[(int)_currentPlayer];
+        foreach (var ab in FindObjectsByType<AllInSlideButton>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            ab.SetInteractable(allInAvailable);
     }
 
     // ── Turn end / win check ────────────────────────────────────────────
@@ -476,6 +513,8 @@ public class GameManager : MonoBehaviour
         _movedToRow    = -1;
         _isFirstTurn   = true;
         _positionCounts.Clear();
+        _usedAllInSlide[0] = _usedAllInSlide[1] = false;
+        _skipNextSlide[0]  = _skipNextSlide[1]  = false;
 
         uiManager.ShowSlidePanel(false);
         uiManager.ShowWinOverlay(false);

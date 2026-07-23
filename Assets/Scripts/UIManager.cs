@@ -3,6 +3,10 @@ using UnityEngine.UI;
 
 public class UIManager : MonoBehaviour
 {
+    // Matches GamePiece's PlayerABg / PlayerBBg so the turn text reads as the same color as that player's pieces.
+    private static readonly Color PlayerAColor = new Color(0.15f, 0.35f, 0.85f);
+    private static readonly Color PlayerBColor = new Color(0.85f, 0.15f, 0.15f);
+
     public Text       turnText;
     public Text       phaseText;
     public GameObject slidePanel;
@@ -22,7 +26,11 @@ public class UIManager : MonoBehaviour
     public void UpdateStatus(PlayerSide player, GamePhase phase)
     {
         string name = player == PlayerSide.PlayerA ? "Player A (Blue)" : "Player B (Red)";
-        if (turnText)  turnText.text = "Turn: " + name;
+        if (turnText)
+        {
+            turnText.text  = "Turn: " + name;
+            turnText.color = player == PlayerSide.PlayerA ? PlayerAColor : PlayerBColor;
+        }
         if (phaseText)
         {
             switch (phase)
